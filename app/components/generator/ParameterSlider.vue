@@ -22,7 +22,10 @@ const displayValue = computed(() => {
 <template>
   <div class="flex flex-col gap-1">
     <div class="flex items-center justify-between">
-      <label class="text-sm text-neutral-300">{{ label }}</label>
+      <div class="flex items-center gap-1">
+        <label class="text-sm text-neutral-300">{{ label }}</label>
+        <slot name="action" />
+      </div>
       <span class="text-xs font-mono text-neutral-400">{{ displayValue }}{{ unit }}</span>
     </div>
     <input

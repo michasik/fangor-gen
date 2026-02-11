@@ -12,7 +12,7 @@ export function useCanvasRenderer() {
   function computeRings(params: GenerationParams): RingSpec[] {
     const rng = createPrng(params.seed)
     const { ringCount, colors } = params
-    const widthVariance = 0.3
+    const widthVariance = params.ringWidthVariance
 
     const maxRadius = 0.48
     const rings: RingSpec[] = []
@@ -25,7 +25,7 @@ export function useCanvasRenderer() {
       const variance = 1 + (rng() * 2 - 1) * widthVariance
       const width = baseWidth * variance
       const innerRadius = Math.max(currentOuter - width, 0)
-      const color = colors[i % colors.length]
+      const color = colors[i % colors.length]!
 
       rings.push({
         outerRadius: currentOuter,
@@ -46,8 +46,8 @@ export function useCanvasRenderer() {
 
     const w = canvas.width
     const h = canvas.height
-    const centerX = w * 0.5
-    const centerY = h * 0.5
+    const centerX = w * (0.5 + params.centerX)
+    const centerY = h * (0.5 + params.centerY)
     const scale = Math.min(w, h)
 
     // Fill background

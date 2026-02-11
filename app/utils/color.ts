@@ -9,7 +9,7 @@ export function isValidHex(value: string): boolean {
 export function normalizeHex(value: string): string {
   let hex = value.replace(/^#/, '')
   if (hex.length === 3) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+    hex = hex[0]! + hex[0]! + hex[1]! + hex[1]! + hex[2]! + hex[2]!
   }
   return `#${hex.toUpperCase()}`
 }
