@@ -64,20 +64,8 @@ const canvasSizeOptions = [
 
       <GeneratorControlsAccordion title="Composition">
         <GeneratorParameterSlider
-          v-model="params.ringCount"
-          label="Ring Count"
-          :min="PARAM_LIMITS.ringCount.min"
-          :max="PARAM_LIMITS.ringCount.max"
-          :step="PARAM_LIMITS.ringCount.step"
-        >
-          <template #action>
-            <GeneratorRandomizeButton @randomize="randomizeParam('ringCount')" />
-          </template>
-        </GeneratorParameterSlider>
-
-        <GeneratorParameterSlider
           v-model="params.blurIntensity"
-          label="Blur Intensity"
+          label="Default Blur"
           :min="PARAM_LIMITS.blurIntensity.min"
           :max="PARAM_LIMITS.blurIntensity.max"
           :step="PARAM_LIMITS.blurIntensity.step"
@@ -112,20 +100,6 @@ const canvasSizeOptions = [
             <GeneratorRandomizeButton @randomize="randomizeParam('centerY')" />
           </template>
         </GeneratorParameterSlider>
-
-        <GeneratorParameterSlider
-          v-model="params.ringWidthVariance"
-          label="Ring Width Variance"
-          :min="PARAM_LIMITS.ringWidthVariance.min"
-          :max="PARAM_LIMITS.ringWidthVariance.max"
-          :step="PARAM_LIMITS.ringWidthVariance.step"
-          :display-multiplier="100"
-          unit="%"
-        >
-          <template #action>
-            <GeneratorRandomizeButton @randomize="randomizeParam('ringWidthVariance')" />
-          </template>
-        </GeneratorParameterSlider>
       </GeneratorControlsAccordion>
 
       <GeneratorControlsAccordion title="Canvas">
@@ -141,9 +115,9 @@ const canvasSizeOptions = [
         />
       </GeneratorControlsAccordion>
 
-      <GeneratorControlsAccordion title="Colors">
+      <GeneratorControlsAccordion title="Rings">
         <GeneratorPalettePresets />
-        <GeneratorColorPaletteControl />
+        <GeneratorRingListControl />
       </GeneratorControlsAccordion>
 
       <button

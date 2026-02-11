@@ -27,20 +27,8 @@ const canvasSizeOptions = [
       <h3 class="text-xs font-medium uppercase tracking-wider text-neutral-500">Composition</h3>
 
       <GeneratorParameterSlider
-        v-model="params.ringCount"
-        label="Ring Count"
-        :min="PARAM_LIMITS.ringCount.min"
-        :max="PARAM_LIMITS.ringCount.max"
-        :step="PARAM_LIMITS.ringCount.step"
-      >
-        <template #action>
-          <GeneratorRandomizeButton @randomize="randomizeParam('ringCount')" />
-        </template>
-      </GeneratorParameterSlider>
-
-      <GeneratorParameterSlider
         v-model="params.blurIntensity"
-        label="Blur Intensity"
+        label="Default Blur"
         :min="PARAM_LIMITS.blurIntensity.min"
         :max="PARAM_LIMITS.blurIntensity.max"
         :step="PARAM_LIMITS.blurIntensity.step"
@@ -75,20 +63,6 @@ const canvasSizeOptions = [
           <GeneratorRandomizeButton @randomize="randomizeParam('centerY')" />
         </template>
       </GeneratorParameterSlider>
-
-      <GeneratorParameterSlider
-        v-model="params.ringWidthVariance"
-        label="Ring Width Variance"
-        :min="PARAM_LIMITS.ringWidthVariance.min"
-        :max="PARAM_LIMITS.ringWidthVariance.max"
-        :step="PARAM_LIMITS.ringWidthVariance.step"
-        :display-multiplier="100"
-        unit="%"
-      >
-        <template #action>
-          <GeneratorRandomizeButton @randomize="randomizeParam('ringWidthVariance')" />
-        </template>
-      </GeneratorParameterSlider>
     </div>
 
     <!-- Canvas -->
@@ -108,11 +82,11 @@ const canvasSizeOptions = [
       />
     </div>
 
-    <!-- Colors -->
+    <!-- Rings -->
     <div class="flex flex-col gap-3">
-      <h3 class="text-xs font-medium uppercase tracking-wider text-neutral-500">Colors</h3>
+      <h3 class="text-xs font-medium uppercase tracking-wider text-neutral-500">Rings</h3>
       <GeneratorPalettePresets />
-      <GeneratorColorPaletteControl />
+      <GeneratorRingListControl />
     </div>
 
     <button

@@ -1,45 +1,7 @@
 import type { GenerationParams } from '~/types/generation'
-import { createPrng } from '~/utils/prng'
 import { hexToRgba, rgbaString } from '~/utils/color'
 
-interface RingSpec {
-  outerRadius: number
-  innerRadius: number
-  color: string
-}
-
 export function useCanvasRenderer() {
-  function computeRings(params: GenerationParams): RingSpec[] {
-    const rng = createPrng(params.seed)
-    const { ringCount, colors } = params
-    const widthVariance = params.ringWidthVariance
-
-    const maxRadius = 0.48
-    const rings: RingSpec[] = []
-
-    // Distribute rings from outer to inner
-    const baseWidth = maxRadius / ringCount
-
-    let currentOuter = maxRadius
-    for (let i = 0; i < ringCount; i++) {
-      const variance = 1 + (rng() * 2 - 1) * widthVariance
-      const width = baseWidth * variance
-      const innerRadius = Math.max(currentOuter - width, 0)
-      const color = colors[i % colors.length]!
-
-      rings.push({
-        outerRadius: currentOuter,
-        innerRadius,
-        color,
-      })
-
-      currentOuter = innerRadius
-      if (currentOuter <= 0) break
-    }
-
-    return rings
-  }
-
   function render(canvas: HTMLCanvasElement, params: GenerationParams) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -48,19 +10,18 @@ export function useCanvasRenderer() {
     const h = canvas.height
     const centerX = w * (0.5 + params.centerX)
     const centerY = h * (0.5 + params.centerY)
-    const scale = Math.min(w, h)
+    const maxRadius = Math.min(w, h) / 2
 
     // Fill background
     ctx.fillStyle = params.backgroundColor
     ctx.fillRect(0, 0, w, h)
 
-    const rings = computeRings(params)
-    const blur = params.blurIntensity
+    // Sort rings by diameter descending (painter's algorithm: outermost first)
+    const sorted = [...params.rings].sort((a, b) => b.diameter - a.diameter)
 
-    // Draw each ring outermost → innermost
-    for (const ring of rings) {
-      const outerPx = ring.outerRadius * scale
-      const innerPx = ring.innerRadius * scale
+    for (const ring of sorted) {
+      const outerPx = (ring.diameter / 100) * maxRadius
+      const innerPx = Math.max(outerPx - ring.width * maxRadius, 0)
 
       if (outerPx <= 0) continue
 
@@ -73,13 +34,13 @@ export function useCanvasRenderer() {
         centerX, centerY, outerPx,
       )
 
-      // Sfumato: gradient from transparent → solid → solid → transparent
-      // blurIntensity controls how much of the ring is gradient vs solid
-      const sfumatoSpread = blur * 0.4
+      // Per-ring sfumato: inner edge blur and outer edge blur
+      const innerSpread = ring.innerBlur * 0.4
+      const outerSpread = ring.outerBlur * 0.4
 
       gradient.addColorStop(0, transparent)
-      gradient.addColorStop(Math.min(sfumatoSpread, 0.49), solid)
-      gradient.addColorStop(Math.max(1 - sfumatoSpread, 0.51), solid)
+      gradient.addColorStop(Math.min(innerSpread, 0.49), solid)
+      gradient.addColorStop(Math.max(1 - outerSpread, 0.51), solid)
       gradient.addColorStop(1, transparent)
 
       ctx.globalCompositeOperation = 'source-over'
@@ -90,5 +51,5 @@ export function useCanvasRenderer() {
     }
   }
 
-  return { computeRings, render }
+  return { render }
 }

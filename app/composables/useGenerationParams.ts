@@ -1,78 +1,101 @@
 import { ref } from 'vue'
-import { DEFAULT_PARAMS, PARAM_LIMITS, type GenerationParams } from '~/types/generation'
+import { DEFAULT_PARAMS, PARAM_LIMITS, createDefaultRing, type GenerationParams, type RingConfig } from '~/types/generation'
 import { createPrng, generateSeed } from '~/utils/prng'
 import { randomHexColor } from '~/utils/color'
 
 const params = ref<GenerationParams>(structuredClone(DEFAULT_PARAMS))
 
 function generateArtisticParams(rng: () => number) {
-  const { ringCount: rc, blurIntensity: bi, centerX: cx, centerY: cy, ringWidthVariance: rwv } = PARAM_LIMITS
-  const ringCount = Math.floor(rng() * (rc.max - rc.min + 1)) + rc.min
+  const { blurIntensity: bi, centerX: cx, centerY: cy } = PARAM_LIMITS
   const blurIntensity = Math.round((rng() * (bi.max - bi.min) + bi.min) * 100) / 100
   const centerX = Math.round((rng() * (cx.max - cx.min) + cx.min) * 100) / 100
   const centerY = Math.round((rng() * (cy.max - cy.min) + cy.min) * 100) / 100
-  const ringWidthVariance = Math.round((rng() * (rwv.max - rwv.min) + rwv.min) * 100) / 100
-  const colorCount = Math.floor(rng() * (PARAM_LIMITS.colorCount.max - PARAM_LIMITS.colorCount.min + 1)) + PARAM_LIMITS.colorCount.min
 
-  const colors: string[] = []
-  for (let i = 0; i < colorCount; i++) {
-    colors.push(randomHexColor(rng))
+  const ringCount = Math.floor(rng() * (PARAM_LIMITS.ringCount.max - PARAM_LIMITS.ringCount.min + 1)) + PARAM_LIMITS.ringCount.min
+  const rings: RingConfig[] = []
+
+  for (let i = 0; i < ringCount; i++) {
+    const baseDiameter = 100 - (i * (100 / ringCount))
+    const variance = (rng() * 2 - 1) * (50 / ringCount)
+    const diameter = Math.round(Math.min(100, Math.max(0, baseDiameter + variance)))
+    const width = Math.round((0.05 + rng() * 0.25) * 100) / 100
+    const innerBlur = Math.round((rng() * (bi.max - bi.min) + bi.min) * 100) / 100
+    const outerBlur = Math.round((rng() * (bi.max - bi.min) + bi.min) * 100) / 100
+
+    rings.push({
+      color: randomHexColor(rng),
+      width,
+      diameter,
+      innerBlur,
+      outerBlur,
+    })
   }
 
-  return { ringCount, blurIntensity, centerX, centerY, ringWidthVariance, colors, backgroundColor: randomHexColor(rng) }
+  return { rings, blurIntensity, centerX, centerY, backgroundColor: randomHexColor(rng) }
 }
 
 export function useGenerationParams() {
-  function setColor(index: number, hex: string) {
-    if (index >= 0 && index < params.value.colors.length) {
-      params.value.colors[index] = hex
+  function setRingProp<K extends keyof RingConfig>(index: number, key: K, value: RingConfig[K]) {
+    if (index >= 0 && index < params.value.rings.length) {
+      params.value.rings[index]![key] = value
     }
+  }
+
+  function addRing() {
+    if (params.value.rings.length >= PARAM_LIMITS.ringCount.max) return
+    const rng = createPrng(params.value.seed + params.value.rings.length)
+    params.value.rings.push(createDefaultRing(rng, params.value.blurIntensity))
+  }
+
+  function removeRing(index: number) {
+    if (params.value.rings.length <= PARAM_LIMITS.ringCount.min) return
+    params.value.rings.splice(index, 1)
+  }
+
+  function reorderRings(fromIndex: number, toIndex: number) {
+    const rings = [...params.value.rings]
+    const [moved] = rings.splice(fromIndex, 1)
+    rings.splice(toIndex, 0, moved!)
+    params.value.rings = rings
   }
 
   function setBackgroundColor(hex: string) {
     params.value.backgroundColor = hex
   }
 
-  function setColorCount(count: number) {
-    const clamped = Math.min(Math.max(count, PARAM_LIMITS.colorCount.min), PARAM_LIMITS.colorCount.max)
-    const current = params.value.colors
-
-    if (clamped > current.length) {
-      const rng = createPrng(params.value.seed + current.length)
-      const newColors = [...current]
-      while (newColors.length < clamped) {
-        newColors.push(randomHexColor(rng))
-      }
-      params.value.colors = newColors
-    } else if (clamped < current.length) {
-      params.value.colors = current.slice(0, clamped)
-    }
-  }
-
   function setParam<K extends keyof GenerationParams>(key: K, value: GenerationParams[K]) {
     params.value[key] = value
   }
 
-  function randomizeParam(key: 'ringCount' | 'blurIntensity' | 'centerX' | 'centerY' | 'ringWidthVariance') {
+  function randomizeParam(key: 'blurIntensity' | 'centerX' | 'centerY') {
     const limits = PARAM_LIMITS[key]
     const rng = createPrng(generateSeed())
     const raw = rng() * (limits.max - limits.min) + limits.min
-    if (limits.step >= 1) {
-      params.value[key] = Math.floor(raw)
-    } else {
-      params.value[key] = Math.round(raw * 100) / 100
-    }
-  }
-
-  function reorderColors(fromIndex: number, toIndex: number) {
-    const colors = [...params.value.colors]
-    const [moved] = colors.splice(fromIndex, 1)
-    colors.splice(toIndex, 0, moved!)
-    params.value.colors = colors
+    params.value[key] = Math.round(raw * 100) / 100
   }
 
   function applyPalette(colors: string[], backgroundColor: string) {
-    params.value.colors = [...colors]
+    const currentRings = params.value.rings
+    const newRings: RingConfig[] = []
+
+    for (let i = 0; i < colors.length; i++) {
+      if (i < currentRings.length) {
+        // Preserve geometry, update color
+        newRings.push({ ...currentRings[i]!, color: colors[i]! })
+      } else {
+        // Create new ring with evenly spaced diameter
+        const diameter = Math.round(100 - (i * (100 / colors.length)))
+        newRings.push({
+          color: colors[i]!,
+          width: 0.16,
+          diameter,
+          innerBlur: params.value.blurIntensity,
+          outerBlur: params.value.blurIntensity,
+        })
+      }
+    }
+
+    params.value.rings = newRings
     params.value.backgroundColor = backgroundColor
   }
 
@@ -103,12 +126,13 @@ export function useGenerationParams() {
 
   return {
     params,
-    setColor,
+    setRingProp,
+    addRing,
+    removeRing,
+    reorderRings,
     setBackgroundColor,
-    setColorCount,
     setParam,
     randomizeParam,
-    reorderColors,
     applyPalette,
     randomizeAll,
     applySeed,
