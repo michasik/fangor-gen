@@ -1,9 +1,61 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { DEFAULT_PARAMS, PARAM_LIMITS, createDefaultRing, type GenerationParams, type RingConfig } from '~/types/generation'
 import { createPrng, generateSeed } from '~/utils/prng'
 import { randomHexColor } from '~/utils/color'
 
 const params = ref<GenerationParams>(structuredClone(DEFAULT_PARAMS))
+
+function encodeParams(p: GenerationParams): string {
+  const rings = p.rings.map(r =>
+    `${r.color.slice(1)}_${r.width}_${r.diameter}_${r.innerBlur}_${r.outerBlur}`
+  ).join('!')
+  const parts = [
+    `s=${encodeURIComponent(p.seed)}`,
+    `b=${p.blurIntensity}`,
+    `bg=${p.backgroundColor.slice(1)}`,
+    `cx=${p.centerX}`,
+    `cy=${p.centerY}`,
+    `ar=${encodeURIComponent(p.aspectRatio)}`,
+    `cs=${p.canvasSize}`,
+    `r=${rings}`,
+  ]
+  return parts.join('&')
+}
+
+function decodeParams(query: string): GenerationParams | null {
+  try {
+    const u = new URLSearchParams(query)
+    const seed = u.get('s')
+    const ringsRaw = u.get('r')
+    if (!seed || !ringsRaw) return null
+
+    const rings: RingConfig[] = ringsRaw.split('!').map(chunk => {
+      const [color, width, diameter, innerBlur, outerBlur] = chunk.split('_')
+      return {
+        color: `#${color}`,
+        width: Number(width),
+        diameter: Number(diameter),
+        innerBlur: Number(innerBlur),
+        outerBlur: Number(outerBlur),
+      }
+    })
+
+    return {
+      seed: decodeURIComponent(seed),
+      blurIntensity: Number(u.get('b') ?? 0.5),
+      backgroundColor: `#${u.get('bg') ?? '1A1A2E'}`,
+      centerX: Number(u.get('cx') ?? 0),
+      centerY: Number(u.get('cy') ?? 0),
+      aspectRatio: (u.get('ar') ?? '1:1') as GenerationParams['aspectRatio'],
+      canvasSize: (u.get('cs') ?? 'medium') as GenerationParams['canvasSize'],
+      rings,
+    }
+  } catch {
+    return null
+  }
+}
+
+let skipUrlSync = false
 
 function generateArtisticParams(rng: () => number) {
   const { blurIntensity: bi, centerX: cx, centerY: cy } = PARAM_LIMITS
@@ -34,7 +86,31 @@ function generateArtisticParams(rng: () => number) {
   return { rings, blurIntensity, centerX, centerY, backgroundColor: randomHexColor(rng) }
 }
 
+function initFromUrl() {
+  if (import.meta.server) return
+  const query = window.location.search.slice(1)
+  if (!query) return
+  const decoded = decodeParams(query)
+  if (decoded) {
+    skipUrlSync = true
+    params.value = decoded
+    skipUrlSync = false
+  }
+}
+
+let urlSyncActive = false
+
 export function useGenerationParams() {
+  if (import.meta.client && !urlSyncActive) {
+    urlSyncActive = true
+    initFromUrl()
+    watch(params, (p) => {
+      if (skipUrlSync) return
+      const qs = encodeParams(p)
+      const newUrl = `${window.location.pathname}?${qs}`
+      window.history.replaceState(null, '', newUrl)
+    }, { deep: true })
+  }
   function setRingProp<K extends keyof RingConfig>(index: number, key: K, value: RingConfig[K]) {
     if (index >= 0 && index < params.value.rings.length) {
       params.value.rings[index]![key] = value

@@ -286,7 +286,7 @@ All other functionality uses built-in browser APIs and Vue/Nuxt ecosystem alread
 - [ ] Dark theme styling
 
 ### Phase 3 - Export
-- [ ] PNG download at full resolution
+- [ ] PNG and AVIF download at full resolution
 - [ ] PDF generation with paper size, orientation, margins, DPI settings
 - [ ] Export settings modal/panel
 
