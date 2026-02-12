@@ -101,12 +101,12 @@ function onDragEnd() {
           'opacity-50': dragIndex === i,
           'ring-1 ring-indigo-500': dragOverIndex === i && dragIndex !== i,
         }"
-        draggable="true"
-        @dragstart="onDragStart(i, $event)"
-        @dragover="onDragOver(i, $event)"
-        @dragleave="onDragLeave"
-        @drop="onDrop(i, $event)"
-        @dragend="onDragEnd"
+        :draggable="expandedIndex !== i"
+        @dragstart="expandedIndex !== i && onDragStart(i, $event)"
+        @dragover="expandedIndex !== i && onDragOver(i, $event)"
+        @dragleave="expandedIndex !== i && onDragLeave()"
+        @drop="expandedIndex !== i && onDrop(i, $event)"
+        @dragend="expandedIndex !== i && onDragEnd()"
       >
         <GeneratorRingControl
           :ring="ring"
