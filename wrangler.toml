@@ -1,0 +1,6 @@
+name = "fangorgen"
+main = ".output/server/index.mjs"
+compatibility_date = "2024-12-01"
+
+[assets]
+directory = ".output/public"
